@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kenneth Marrow — Backend / Python Developer</title>
+<meta name="description" content="Kenneth Marrow — Backend / Python developer focused on production reliability, observability, and internal platform tooling." />
+<meta name="color-scheme" content="dark light" />
+
+<!-- Fonts: Inter for UI/body, JetBrains Mono for monospace accents -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!-- Favicon: inline SVG -->
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230f1214'/><path d='M9 8v16M9 16l7-8M9 16l7 8' stroke='%237fb0ac' stroke-width='2.25' fill='none' stroke-linecap='square'/></svg>" />
+
+<style>
+/* ---------- Design tokens ---------- */
+:root {
+  /* Dark (default) */
+  --bg:            #0d1013;      /* deep charcoal */
+  --bg-elev:       #12161a;      /* raised surface */
+  --bg-inset:      #0a0d10;      /* inset surface */
+  --border:        #1e2429;      /* subtle rule */
+  --border-strong: #2a323a;      /* used for hovered/active edges */
+  --fg:            #e6e8ea;      /* soft off-white */
+  --fg-muted:      #9aa3ab;      /* secondary copy */
+  --fg-dim:        #6b747c;      /* metadata */
+  --accent:        #7fb0ac;      /* desaturated teal */
+  --accent-dim:    #4a6e6b;
+  --accent-ink:    #0d1013;      /* text on accent */
+  --status-ok:     #7fb0ac;
+  --warn:          #c9a86a;
+
+  /* Type */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Rhythm */
+  --step: 8px;
+  --radius: 4px;
+  --max-w: 1200px;
+  --gutter: clamp(20px, 4vw, 48px);
+
+  /* Motion */
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur: 220ms;
+}
+
+/* Light theme (opt-in via toggle) */
+html[data-theme="light"] {
+  --bg:            #f6f6f4;
+  --bg-elev:       #ffffff;
+  --bg-inset:      #efefec;
+  --border:        #e2e2dd;
+  --border-strong: #cfd0ca;
+  --fg:            #14181b;
+  --fg-muted:      #4b555c;
+  --fg-dim:        #7a848c;
+  --accent:        #386f6a;
+  --accent-dim:    #6c9895;
+  --accent-ink:    #ffffff;
+}
+
+/* ---------- Reset & base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation: none !important; transition: none !important; }
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  font-feature-settings: "cv02","cv03","cv04","cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* Faint scanline / grid texture for observability feel — very subtle */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 96px 100%;
+  z-index: 0;
+}
+html[data-theme="light"] body::before {
+  background-image: linear-gradient(to right, rgba(0,0,0,0.025) 1px, transparent 1px);
+}
+
+img, svg { display: block; max-width: 100%; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--dur) var(--ease);
+}
+a:hover { color: var(--accent); }
+
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------- Typography ---------- */
+h1, h2, h3, h4 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+  color: var(--fg);
+}
+h1 { font-size: clamp(2.1rem, 4.6vw, 3.4rem); font-weight: 600; letter-spacing: -0.025em; }
+h2 { font-size: clamp(1.4rem, 2.2vw, 1.75rem); }
+h3 { font-size: 1.05rem; letter-spacing: -0.01em; }
+p  { margin: 0; color: var(--fg-muted); }
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* ---------- Layout primitives ---------- */
+.container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+  position: relative;
+  z-index: 1;
+}
+
+section { padding-block: clamp(64px, 9vw, 112px); position: relative; z-index: 1; }
+section + section { border-top: 1px solid var(--border); }
+
+.section-head {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  margin-bottom: 48px;
+  align-items: baseline;
+}
+.section-head .label { color: var(--accent); }
+.section-head h2 { max-width: 62ch; }
+@media (max-width: 720px) {
+  .section-head { grid-template-columns: 1fr; gap: 12px; margin-bottom: 32px; }
+}
+
+/* ---------- Nav ---------- */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 14px var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: 0.95rem;
+}
+.brand svg { width: 22px; height: 22px; color: var(--accent); }
+.brand-mark {
+  font-family: var(--font-mono);
+  color: var(--fg-dim);
+  font-size: 0.75rem;
+  margin-left: 6px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 22px;
+  margin-left: auto;
+  font-size: 0.88rem;
+  color: var(--fg-muted);
+}
+.nav-links a {
+  position: relative;
+  padding: 4px 0;
+}
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -3px;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur) var(--ease);
+}
+.nav-links a:hover::after,
+.nav-links a:focus-visible::after { transform: scaleX(1); }
+
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+
+.theme-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg-muted);
+  height: 32px; width: 32px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.theme-toggle:hover { color: var(--fg); border-color: var(--border-strong); }
+.theme-toggle svg { width: 15px; height: 15px; }
+
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  color: var(--fg);
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              background var(--dur) var(--ease),
+              color var(--dur) var(--ease);
+}
+.btn:hover { border-color: var(--border-strong); background: color-mix(in oklab, var(--bg-elev) 70%, var(--accent) 6%); color: var(--fg); }
+.btn:active { transform: translateY(1px); }
+.btn svg { width: 14px; height: 14px; }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.btn-primary:hover {
+  background: color-mix(in oklab, var(--accent) 88%, white 12%);
+  border-color: color-mix(in oklab, var(--accent) 88%, white 12%);
+  color: var(--accent-ink);
+}
+
+/* ---------- Hero ---------- */
+.hero { padding-block: clamp(72px, 10vw, 128px); }
+.hero-grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 16px; }
+}
+
+.hero-meta { display: flex; flex-direction: column; gap: 10px; }
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fg-muted);
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  width: fit-content;
+  background: var(--bg-elev);
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--status-ok);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--status-ok) 20%, transparent);
+  animation: pulse 2.4s var(--ease) infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--status-ok) 22%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in oklab, var(--status-ok) 8%, transparent); }
+}
+
+.hero h1 { max-width: 22ch; margin-bottom: 20px; }
+.hero h1 .accent { color: var(--accent); }
+.hero-lede { font-size: 1.06rem; color: var(--fg-muted); max-width: 62ch; }
+.hero-lede + .hero-lede { margin-top: 14px; }
+
+.hero-cta {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ---------- Metrics band ---------- */
+.metrics {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-inset);
+}
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.metric {
+  padding: 28px 24px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background var(--dur) var(--ease);
+}
+.metric:last-child { border-right: none; }
+.metric:hover { background: color-mix(in oklab, var(--bg-inset) 82%, var(--accent) 6%); }
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: clamp(1.7rem, 2.5vw, 2.1rem);
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.metric-value .unit { color: var(--accent); font-weight: 500; }
+.metric-label {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+@media (max-width: 900px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .metric:nth-child(2) { border-right: none; }
+  .metric:nth-child(1), .metric:nth-child(2) { border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 520px) {
+  .metrics-grid { grid-template-columns: 1fr; }
+  .metric { border-right: none; border-bottom: 1px solid var(--border); }
+  .metric:last-child { border-bottom: none; }
+}
+
+/* ---------- About ---------- */
+.about-grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  align-items: start;
+}
+.about-body p + p { margin-top: 16px; }
+.about-body { max-width: 68ch; font-size: 1.02rem; color: var(--fg-muted); }
+.about-body strong { color: var(--fg); font-weight: 500; }
+@media (max-width: 720px) {
+  .about-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Skills ---------- */
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-elev);
+}
+.skill-cat {
+  padding: 24px 26px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: background var(--dur) var(--ease);
+}
+.skill-cat:hover { background: color-mix(in oklab, var(--bg-elev) 82%, var(--accent) 5%); }
+.skill-cat:nth-child(2n) { border-right: none; }
+.skill-cat:nth-last-child(-n+2) { border-bottom: none; }
+
+.skill-cat-head {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--accent);
+}
+.skill-cat-head .idx {
+  font-family: var(--font-mono);
+  color: var(--fg-dim);
+  font-size: 0.72rem;
+}
+.skill-cat h3 {
+  color: var(--fg);
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.skill-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.skill-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--fg-muted);
+  background: var(--bg-inset);
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.skill-tag:hover { color: var(--fg); border-color: var(--border-strong); }
+
+@media (max-width: 720px) {
+  .skills-grid { grid-template-columns: 1fr; }
+  .skill-cat { border-right: none; border-bottom: 1px solid var(--border); }
+  .skill-cat:last-child { border-bottom: none; }
+  .skill-cat:nth-child(2n) { border-right: none; }
+  .skill-cat:nth-last-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .skill-cat:last-child { border-bottom: none; }
+}
+
+/* ---------- Featured work ---------- */
+.work-list {
+  display: flex; flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+.work-item {
+  display: grid;
+  grid-template-columns: 60px 1fr 200px;
+  gap: 32px;
+  padding: 32px 4px;
+  border-bottom: 1px solid var(--border);
+  align-items: baseline;
+  transition: background var(--dur) var(--ease);
+  position: relative;
+}
+.work-item:hover { background: color-mix(in oklab, var(--bg) 82%, var(--accent) 4%); }
+.work-item::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform var(--dur) var(--ease);
+}
+.work-item:hover::before { transform: scaleY(1); }
+
+.work-num { font-family: var(--font-mono); color: var(--fg-dim); font-size: 0.85rem; padding-top: 4px; }
+.work-body h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  letter-spacing: -0.015em;
+}
+.work-body p { color: var(--fg-muted); max-width: 62ch; }
+.work-body p + p { margin-top: 10px; }
+.work-tags {
+  display: flex; flex-direction: column; gap: 6px;
+  padding-top: 4px;
+}
+.work-tags .tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.work-tags .tag::before { content: "// "; color: var(--accent); }
+
+@media (max-width: 860px) {
+  .work-item { grid-template-columns: 40px 1fr; gap: 20px; }
+  .work-tags { grid-column: 1 / -1; padding-left: 60px; }
+}
+@media (max-width: 520px) {
+  .work-tags { padding-left: 0; }
+}
+
+/* ---------- Experience (timeline) ---------- */
+.exp-list { display: flex; flex-direction: column; }
+.exp-item {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+  padding: 28px 0;
+  border-top: 1px solid var(--border);
+}
+.exp-item:first-child { border-top: none; padding-top: 0; }
+.exp-meta { display: flex; flex-direction: column; gap: 6px; }
+.exp-date {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 0.78rem;
+}
+.exp-company {
+  color: var(--fg-dim);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+.exp-body h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+.exp-body .role-company {
+  color: var(--fg-muted);
+  font-size: 0.92rem;
+  margin-bottom: 12px;
+}
+.exp-body p { color: var(--fg-muted); max-width: 68ch; }
+.exp-body p + p { margin-top: 10px; }
+
+@media (max-width: 720px) {
+  .exp-item { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* ---------- Education ---------- */
+.edu-grid {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 32px;
+}
+.edu-list { display: flex; flex-direction: column; gap: 18px; }
+.edu-item {
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  transition: border-color var(--dur) var(--ease);
+}
+.edu-item:hover { border-color: var(--border-strong); }
+.edu-item h3 { font-size: 1rem; margin-bottom: 6px; letter-spacing: -0.005em; }
+.edu-item .edu-org {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--fg-dim);
+  margin-bottom: 8px;
+}
+.edu-item p { font-size: 0.94rem; }
+
+@media (max-width: 720px) {
+  .edu-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Contact CTA ---------- */
+.contact-inner {
+  display: grid;
+  grid-template-columns: 200px 1fr auto;
+  gap: 32px;
+  align-items: center;
+}
+.contact-inner h2 { max-width: 22ch; }
+.contact-inner p { max-width: 52ch; margin-top: 10px; }
+@media (max-width: 860px) {
+  .contact-inner { grid-template-columns: 1fr; gap: 20px; }
+  .contact-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+}
+
+/* ---------- Footer ---------- */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px var(--gutter);
+  color: var(--fg-dim);
+  font-size: 0.85rem;
+  background: var(--bg-inset);
+}
+.footer-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+}
+.footer-brand { display: flex; flex-direction: column; gap: 6px; }
+.footer-brand .name { color: var(--fg); font-weight: 500; }
+.footer-links {
+  display: flex; gap: 22px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+.footer-links a { color: var(--fg-muted); }
+.footer-links a:hover { color: var(--accent); }
+.footer-meta {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  display: flex; justify-content: space-between; gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+@media (max-width: 640px) {
+  .footer-inner { grid-template-columns: 1fr; }
+  .footer-meta { flex-direction: column; }
+}
+
+/* ---------- Reveal on scroll ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 600ms var(--ease), transform 600ms var(--ease);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* Skip link */
+.skip {
+  position: absolute;
+  left: 8px; top: 8px;
+  padding: 8px 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  border-radius: var(--radius);
+  transform: translateY(-140%);
+  transition: transform var(--dur) var(--ease);
+  z-index: 100;
+}
+.skip:focus { transform: translateY(0); }
+
+</style>
+</head>
+<body>
+
+<a href="#main" class="skip">Skip to content</a>
+
+<!-- ================= NAV ================= -->
+<header class="nav" role="banner">
+  <div class="nav-inner">
+    <a href="#top" class="brand" aria-label="Kenneth Marrow — home">
+      <svg viewBox="0 0 32 32" aria-hidden="true" fill="none">
+        <rect x="1" y="1" width="30" height="30" rx="4" stroke="currentColor" stroke-width="1.5" opacity="0.35"/>
+        <path d="M10 8v16M10 16l7-8M10 16l7 8" stroke="currentColor" stroke-width="2" stroke-linecap="square"/>
+      </svg>
+      <span>Kenneth Marrow</span>
+      <span class="brand-mark">/ backend</span>
+    </a>
+
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#about">About</a>
+      <a href="#skills">Skills</a>
+      <a href="#work">Work</a>
+      <a href="#experience">Experience</a>
+      <a href="#contact">Contact</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle color theme" title="Toggle theme">
+        <!-- moon (dark active) / sun (light active) toggled by JS -->
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ================= HERO ================= -->
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-meta">
+        <div class="mono">01 / Introduction</div>
+        <div class="status-pill" title="Available for work">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Available · Nashville, TN</span>
+        </div>
+      </div>
+      <div>
+        <h1 id="hero-title" class="reveal">
+          Backend / Python Developer focused on
+          <span class="accent">production reliability</span>,
+          <span class="accent">observability</span>, and
+          <span class="accent">internal platform tooling</span>.
+        </h1>
+        <p class="hero-lede reveal">
+          I build automation and backend-adjacent systems that reduce manual work, improve operational stability, and make internal tools more reliable for the teams that depend on them every day.
+        </p>
+        <p class="hero-lede reveal">
+          My experience spans Python automation, AI-enabled internal products, Linux-based environments, and observability standards across logging, metrics, and alerting.
+        </p>
+        <div class="hero-cta reveal">
+          <a class="btn btn-primary" href="mailto:kenneth.marrow@gmail.com">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="m4 6 8 7 8-7"/></svg>
+            Contact
+          </a>
+          <a class="btn" href="#" data-link="resume">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M8 13h8M8 17h5"/></svg>
+            Résumé
+          </a>
+          <a class="btn" href="#" data-link="github">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>
+            GitHub
+          </a>
+          <a class="btn" href="#" data-link="linkedin">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M8 10v8M8 6v.01M12 18v-5a2 2 0 0 1 4 0v5M12 18h4M12 13v5"/></svg>
+            LinkedIn
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= METRICS BAND ================= -->
+<section class="metrics" aria-labelledby="metrics-title" style="padding-block: 0;">
+  <h2 id="metrics-title" class="sr-only" style="position:absolute;left:-9999px;">Impact metrics</h2>
+  <div class="container" style="padding-inline: 0;">
+    <div class="metrics-grid">
+      <div class="metric reveal">
+        <div class="mono">manual_time.reduction</div>
+        <div class="metric-value">94<span class="unit">%</span></div>
+        <div class="metric-label">Reduction in manual processing time via Python and Bash automation workflows.</div>
+      </div>
+      <div class="metric reveal">
+        <div class="mono">hours.recovered.yr</div>
+        <div class="metric-value">108<span class="unit">+</span></div>
+        <div class="metric-label">Hours recovered annually by streamlining internal operational processes.</div>
+      </div>
+      <div class="metric reveal">
+        <div class="mono">throughput.multiplier</div>
+        <div class="metric-value">15<span class="unit">×</span></div>
+        <div class="metric-label">Increase in operational throughput across multiple business functions.</div>
+      </div>
+      <div class="metric reveal">
+        <div class="mono">observe.expertise</div>
+        <div class="metric-value">SME</div>
+        <div class="metric-label">Subject matter expert in Observe — logging, metrics, and alert naming standards.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ABOUT ================= -->
+<section id="about" aria-labelledby="about-title">
+  <div class="container">
+    <div class="section-head">
+      <div class="mono label">02 / About</div>
+      <h2 id="about-title">Backend engineering with a production-first mindset.</h2>
+    </div>
+    <div class="about-grid">
+      <div class="mono">// profile.md</div>
+      <div class="about-body reveal">
+        <p>I'm an emerging backend engineer with a production-first mindset and a strong interest in systems that need to be <strong>dependable, measurable, and maintainable at scale</strong>.</p>
+        <p>My work has centered on internal tools, AI-powered systems, automation, and observability, with a focus on solving operational problems in ways that make day-to-day work faster and clearer for other teams.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SKILLS ================= -->
+<section id="skills" aria-labelledby="skills-title">
+  <div class="container">
+    <div class="section-head">
+      <div class="mono label">03 / Capabilities</div>
+      <h2 id="skills-title">Skills across backend, platform, observability, AI, and security.</h2>
+    </div>
+
+    <div class="skills-grid reveal">
+      <div class="skill-cat">
+        <div class="skill-cat-head">
+          <span class="idx">01</span>
+          <span class="mono" style="color:var(--accent)">Backend &amp; Programming</span>
+        </div>
+        <h3>Languages, APIs, and system design</h3>
+        <div class="skill-list">
+          <span class="skill-tag">Python</span>
+          <span class="skill-tag">Bash</span>
+          <span class="skill-tag">JavaScript</span>
+          <span class="skill-tag">Java</span>
+          <span class="skill-tag">Automation scripting</span>
+          <span class="skill-tag">API fundamentals</span>
+          <span class="skill-tag">System design fundamentals</span>
+        </div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-head">
+          <span class="idx">02</span>
+          <span class="mono" style="color:var(--accent)">Platform &amp; Infrastructure</span>
+        </div>
+        <h3>Linux, containers, enterprise ops</h3>
+        <div class="skill-list">
+          <span class="skill-tag">Linux (SUSE)</span>
+          <span class="skill-tag">Kubernetes</span>
+          <span class="skill-tag">Rancher Desktop</span>
+          <span class="skill-tag">Virtualization</span>
+          <span class="skill-tag">Internal platform support</span>
+          <span class="skill-tag">Enterprise app operations</span>
+        </div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-head">
+          <span class="idx">03</span>
+          <span class="mono" style="color:var(--accent)">Observability &amp; Reliability</span>
+        </div>
+        <h3>Logs, metrics, alerts, troubleshooting</h3>
+        <div class="skill-list">
+          <span class="skill-tag">Observe</span>
+          <span class="skill-tag">Logging standardization</span>
+          <span class="skill-tag">Metrics conventions</span>
+          <span class="skill-tag">Alert naming standards</span>
+          <span class="skill-tag">Monitoring integration</span>
+          <span class="skill-tag">Issue detection</span>
+          <span class="skill-tag">Operational troubleshooting</span>
+        </div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-head">
+          <span class="idx">04</span>
+          <span class="mono" style="color:var(--accent)">AI Systems</span>
+        </div>
+        <h3>LLM-powered internal tooling</h3>
+        <div class="skill-list">
+          <span class="skill-tag">LLM-powered internal tools</span>
+          <span class="skill-tag">Response auditing</span>
+          <span class="skill-tag">Query-gap analysis</span>
+          <span class="skill-tag">SOP integration</span>
+          <span class="skill-tag">Usability &amp; reliability</span>
+        </div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-head">
+          <span class="idx">05</span>
+          <span class="mono" style="color:var(--accent)">Security &amp; Operations</span>
+        </div>
+        <h3>SIEM exposure, networking, labs</h3>
+        <div class="skill-list">
+          <span class="skill-tag">Splunk</span>
+          <span class="skill-tag">Elastic</span>
+          <span class="skill-tag">QRadar</span>
+          <span class="skill-tag">Networking &amp; subnetting</span>
+          <span class="skill-tag">SIEM exposure</span>
+          <span class="skill-tag">Azure AD</span>
+          <span class="skill-tag">Penetration testing labs</span>
+        </div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-head">
+          <span class="idx">06</span>
+          <span class="mono" style="color:var(--accent)">Ways of Working</span>
+        </div>
+        <h3>Cross-functional operational impact</h3>
+        <div class="skill-list">
+          <span class="skill-tag">Reliability engineering mindset</span>
+          <span class="skill-tag">Documentation</span>
+          <span class="skill-tag">Standards authoring</span>
+          <span class="skill-tag">Cross-team collaboration</span>
+          <span class="skill-tag">Incident response support</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WORK ================= -->
+<section id="work" aria-labelledby="work-title">
+  <div class="container">
+    <div class="section-head">
+      <div class="mono label">04 / Featured work</div>
+      <h2 id="work-title">Selected projects across observability, automation, and internal AI tooling.</h2>
+    </div>
+
+    <div class="work-list">
+      <article class="work-item reveal">
+        <div class="work-num">01</div>
+        <div class="work-body">
+          <h3>Observability Standards &amp; Monitoring Strategy</h3>
+          <p>Developed deep expertise in Observe and helped define best practices for logging standardization, metrics structure, and alert naming standards used to improve monitoring clarity and consistency.</p>
+          <p>This work helped create cleaner observability patterns, better operational visibility, and more maintainable standards for teams working across internal systems.</p>
+        </div>
+        <div class="work-tags">
+          <span class="tag">Observe</span>
+          <span class="tag">Logging / Metrics</span>
+          <span class="tag">Alert standards</span>
+        </div>
+      </article>
+
+      <article class="work-item reveal">
+        <div class="work-num">02</div>
+        <div class="work-body">
+          <h3>Automation for Internal Operations</h3>
+          <p>Designed and implemented Python and Bash automation workflows that reduced manual processing time by 94%, recovered more than 108 hours annually, and increased throughput by roughly 15×.</p>
+          <p>The goal was to eliminate repetitive maintenance work, improve response speed, and make internal operations more efficient and scalable.</p>
+        </div>
+        <div class="work-tags">
+          <span class="tag">Python</span>
+          <span class="tag">Bash</span>
+          <span class="tag">Ops automation</span>
+        </div>
+      </article>
+
+      <article class="work-item reveal">
+        <div class="work-num">03</div>
+        <div class="work-body">
+          <h3>AI Product Specialist Reliability Improvements</h3>
+          <p>Owned improvement efforts for the “TSC Product Specialist” internal LLM-powered tool, focusing on accuracy, usability, and reliability across multiple intranet platforms.</p>
+          <p>Audited high-frequency query behavior, identified response gaps, and drove targeted fixes that improved access to SOP and product knowledge while increasing user trust in the system.</p>
+        </div>
+        <div class="work-tags">
+          <span class="tag">LLM tooling</span>
+          <span class="tag">Response auditing</span>
+          <span class="tag">SOP integration</span>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EXPERIENCE ================= -->
+<section id="experience" aria-labelledby="exp-title">
+  <div class="container">
+    <div class="section-head">
+      <div class="mono label">05 / Experience</div>
+      <h2 id="exp-title">A path from operations leadership into backend and platform engineering.</h2>
+    </div>
+
+    <div class="exp-list">
+      <article class="exp-item reveal">
+        <div class="exp-meta">
+          <div class="exp-date">Nov 2024 — Present</div>
+          <div class="exp-company">Tractor Supply Company</div>
+        </div>
+        <div class="exp-body">
+          <h3>Associate Developer</h3>
+          <p>Own and improve internal tools within the intranet ecosystem, with work spanning LLM-powered systems, bug resolution, automation, operational efficiency, and cross-functional collaboration.</p>
+          <p>Built Python and Bash workflows to reduce maintenance overhead, improve monitoring, and support more reliable internal platform operations.</p>
+        </div>
+      </article>
+
+      <article class="exp-item reveal">
+        <div class="exp-meta">
+          <div class="exp-date">Jan 2024 — Nov 2024</div>
+          <div class="exp-company">Tractor Supply Company</div>
+        </div>
+        <div class="exp-body">
+          <h3>Computer Vision Intern</h3>
+          <p>Supported development of an AI-powered customer engagement system and automated system administration and monitoring tasks in enterprise Linux environments.</p>
+          <p>Contributed to troubleshooting, deployment support, and system reliability improvements across the application lifecycle.</p>
+        </div>
+      </article>
+
+      <article class="exp-item reveal">
+        <div class="exp-meta">
+          <div class="exp-date">Nov 2018 — Nov 2022</div>
+          <div class="exp-company">Americas Motor Sports</div>
+        </div>
+        <div class="exp-body">
+          <h3>Sales Manager</h3>
+          <p>Led performance-based training and operational improvement initiatives tied to productivity, revenue growth, and inventory performance.</p>
+          <p>This role strengthened leadership, communication, and practical business problem-solving skills that still shape how I approach engineering work today.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= EDUCATION ================= -->
+<section id="education" aria-labelledby="edu-title">
+  <div class="container">
+    <div class="section-head">
+      <div class="mono label">06 / Education &amp; Certifications</div>
+      <h2 id="edu-title">Formal training in computer information technology with a cybersecurity focus.</h2>
+    </div>
+    <div class="edu-grid">
+      <div class="mono">// credentials.list</div>
+      <div class="edu-list">
+        <div class="edu-item reveal">
+          <h3>Associate of Applied Science — Computer Information Technology</h3>
+          <div class="edu-org">Nashville State Community College · Cybersecurity concentration</div>
+          <p>Expected December 2024 · President's List, five times.</p>
+        </div>
+        <div class="edu-item reveal">
+          <h3>Google Cybersecurity Certificate</h3>
+          <div class="edu-org">Professional certificate · Completed</div>
+          <p>Foundations of security operations, incident response, and defensive tooling.</p>
+        </div>
+        <div class="edu-item reveal">
+          <h3>CompTIA Security+</h3>
+          <div class="edu-org">Industry certification · In progress</div>
+          <p>Ongoing preparation covering threats, cryptography, architecture, and operations.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CONTACT ================= -->
+<section id="contact" aria-labelledby="contact-title">
+  <div class="container">
+    <div class="section-head">
+      <div class="mono label">07 / Contact</div>
+      <h2 id="contact-title">Open to backend, platform, and reliability-focused roles.</h2>
+    </div>
+    <div class="contact-inner reveal">
+      <div class="mono">// get_in_touch()</div>
+      <div>
+        <p>The best way to reach me is over email. I'm especially interested in teams focused on internal platforms, operational tooling, and observability at scale.</p>
+      </div>
+      <div class="contact-actions" style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a class="btn btn-primary" href="mailto:kenneth.marrow@gmail.com">Email me</a>
+        <a class="btn" href="#" data-link="linkedin">LinkedIn</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <span class="mono">// contact</span>
+      <span class="name">Kenneth Marrow</span>
+      <span>Nashville, Tennessee</span>
+      <a href="mailto:kenneth.marrow@gmail.com">kenneth.marrow@gmail.com</a>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="#" data-link="github">GitHub ↗</a>
+      <a href="#" data-link="linkedin">LinkedIn ↗</a>
+      <a href="#" data-link="resume">Résumé ↗</a>
+    </nav>
+    <div class="footer-meta">
+      <span>© <span id="year"></span> Kenneth Marrow · All systems nominal</span>
+      <span>Built with HTML, CSS &amp; a little JavaScript</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ---------- Year ----------
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // ---------- Theme toggle (dark-first, opt-in light) ----------
+  (function () {
+    const root = document.documentElement;
+    const btn = document.getElementById('themeToggle');
+    const icon = document.getElementById('themeIcon');
+
+    const SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 3v1M12 20v1M4.2 4.2l.7.7M19.1 19.1l.7.7M3 12h1M20 12h1M4.2 19.8l.7-.7M19.1 4.9l.7-.7"/>';
+    const MOON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/>';
+
+    // Try to honor saved pref, but stay dark by default. localStorage may be blocked in sandbox; guard.
+    let saved = null;
+    try { saved = localStorage.getItem('theme'); } catch (e) {}
+    if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
+
+    function sync() {
+      const t = root.getAttribute('data-theme');
+      icon.innerHTML = t === 'light' ? SUN : MOON;
+      btn.setAttribute('aria-pressed', t === 'light' ? 'true' : 'false');
+      btn.title = t === 'light' ? 'Switch to dark' : 'Switch to light';
+    }
+    sync();
+
+    btn.addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      root.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch (e) {}
+      sync();
+    });
+  })();
+
+  // ---------- Reveal on scroll ----------
+  (function () {
+    const els = document.querySelectorAll('.reveal');
+    const revealAll = () => els.forEach(el => el.classList.add('is-visible'));
+
+    // Respect reduced motion or missing IO support: reveal immediately.
+    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+      revealAll();
+      return;
+    }
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px 15% 0px' });
+
+    els.forEach(el => io.observe(el));
+
+    // Safety net: ensure everything is visible after a short window,
+    // covering full-page screenshot tools, print, or any scroll-less viewing.
+    setTimeout(revealAll, 1400);
+  })();
+
+  // ---------- Placeholder external links ----------
+  // Update these three values with your actual URLs; every button/link with the
+  // matching data-link attribute will be updated in place.
+  const LINKS = {
+    github:   'https://github.com/',      // ← replace
+    linkedin: 'https://www.linkedin.com/', // ← replace
+    resume:   '#'                          // ← replace with resume URL / PDF
+  };
+  document.querySelectorAll('[data-link]').forEach(a => {
+    const key = a.getAttribute('data-link');
+    if (LINKS[key] && LINKS[key] !== '#') {
+      a.setAttribute('href', LINKS[key]);
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+    }
+  });
+</script>
+
+</body>
+</html>
