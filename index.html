@@ -638,6 +638,9 @@ footer {
   .reveal { opacity: 1; transform: none; }
 }
 
+/* Force-hide elements with the `hidden` attribute even when other display rules apply. */
+[hidden] { display: none !important; }
+
 /* Skip link */
 .skip {
   position: absolute;
@@ -1118,10 +1121,14 @@ footer {
   };
   document.querySelectorAll('[data-link]').forEach(a => {
     const key = a.getAttribute('data-link');
-    if (LINKS[key] && LINKS[key] !== '#') {
-      a.setAttribute('href', LINKS[key]);
+    const url = LINKS[key];
+    if (url && url !== '#') {
+      a.setAttribute('href', url);
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
+    } else {
+      // No URL set yet — hide the element until one is provided.
+      a.hidden = true;
     }
   });
 </script>
